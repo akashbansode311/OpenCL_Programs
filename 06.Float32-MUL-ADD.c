@@ -2,53 +2,55 @@
 #include <stdlib.h>
 #include <CL/cl.h>
 
+#define KERNEL_FILE "fp32.cl"
 #define ARRAY_SIZE (5120 * 10000)  // Array size
-#define KERNEL_FILE "06.Float32-MUL-ADD.cl"
 
 int main() {
-    const int N = ARRAY_SIZE;  // Define N as a constant
-    const size_t size_fp32 = N * sizeof(float);
-    
+    const int N = ARRAY_SIZE;  // Define N as a constant variable
+
+    float *h_a, *h_b, *h_c, *h_d; // Host memory
+    cl_mem d_a, d_b, d_c, d_d;  // Device memory
+    cl_int err;
+
+    size_t size = N * sizeof(float);
+
     // Allocate host memory
-    float *h_a = (float*)malloc(size_fp32);
-    float *h_b = (float*)malloc(size_fp32);
-    float *h_c = (float*)malloc(size_fp32);
-    float *h_d = (float*)malloc(size_fp32);
+    h_a = (float*)malloc(size);
+    h_b = (float*)malloc(size);
+    h_c = (float*)malloc(size);
+    h_d = (float*)malloc(size);
 
     // Initialize data
     for (int i = 0; i < N; i++) {
-        h_a[i] = (float)i * 1.0f;
-        h_b[i] = (float)i * 2.0f;
-        h_c[i] = (float)i * 3.0f;
+        h_a[i] = (float)i;
+        h_b[i] = 2.0f * (float)i;
+        h_c[i] = 3.0f * (float)i;
     }
 
-    // OpenCL setup
-    cl_int err;
+    // Get platform and device
     cl_platform_id platform;
     cl_device_id device;
-    cl_context context;
-    cl_command_queue queue;
-    cl_program program;
-    cl_kernel kernel;
-    cl_mem d_a, d_b, d_c, d_d;
+    clGetPlatformIDs(1, &platform, NULL);
+    clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, NULL);
 
-    err = clGetPlatformIDs(1, &platform, NULL);
-    err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, NULL);
-    context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
-    queue = clCreateCommandQueueWithProperties(context, device, 0, &err);
+    // Create OpenCL context
+    cl_context context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
+
+    // Create command queue
+    cl_command_queue queue = clCreateCommandQueueWithProperties(context, device, 0, &err);
 
     // Allocate device memory
-    d_a = clCreateBuffer(context, CL_MEM_READ_ONLY, size_fp32, NULL, &err);
-    d_b = clCreateBuffer(context, CL_MEM_READ_ONLY, size_fp32, NULL, &err);
-    d_c = clCreateBuffer(context, CL_MEM_READ_ONLY, size_fp32, NULL, &err);
-    d_d = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_fp32, NULL, &err);
+    d_a = clCreateBuffer(context, CL_MEM_READ_ONLY, size, NULL, &err);
+    d_b = clCreateBuffer(context, CL_MEM_READ_ONLY, size, NULL, &err);
+    d_c = clCreateBuffer(context, CL_MEM_READ_ONLY, size, NULL, &err);
+    d_d = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size, NULL, &err);
 
     // Copy data to device
-    clEnqueueWriteBuffer(queue, d_a, CL_TRUE, 0, size_fp32, h_a, 0, NULL, NULL);
-    clEnqueueWriteBuffer(queue, d_b, CL_TRUE, 0, size_fp32, h_b, 0, NULL, NULL);
-    clEnqueueWriteBuffer(queue, d_c, CL_TRUE, 0, size_fp32, h_c, 0, NULL, NULL);
+    clEnqueueWriteBuffer(queue, d_a, CL_TRUE, 0, size, h_a, 0, NULL, NULL);
+    clEnqueueWriteBuffer(queue, d_b, CL_TRUE, 0, size, h_b, 0, NULL, NULL);
+    clEnqueueWriteBuffer(queue, d_c, CL_TRUE, 0, size, h_c, 0, NULL, NULL);
 
-    // Read kernel source
+    // Load and compile the kernel
     FILE *fp = fopen(KERNEL_FILE, "r");
     fseek(fp, 0, SEEK_END);
     size_t kernel_size = ftell(fp);
@@ -58,10 +60,13 @@ int main() {
     kernel_source[kernel_size] = '\0';
     fclose(fp);
 
-    // Create and build OpenCL program
-    program = clCreateProgramWithSource(context, 1, (const char **)&kernel_source, &kernel_size, &err);
+    cl_program program = clCreateProgramWithSource(context, 1, (const char**)&kernel_source, &kernel_size, &err);
+
+    // Build program
     clBuildProgram(program, 1, &device, NULL, NULL, NULL);
-    kernel = clCreateKernel(program, "fp32Kernel", &err);
+
+    // Create kernel
+    cl_kernel kernel = clCreateKernel(program, "floatKernel", &err);
 
     // Set kernel arguments
     clSetKernelArg(kernel, 0, sizeof(cl_mem), &d_a);
@@ -70,14 +75,17 @@ int main() {
     clSetKernelArg(kernel, 3, sizeof(cl_mem), &d_d);
     clSetKernelArg(kernel, 4, sizeof(int), &N);
 
-    // Launch kernel
-    size_t globalSize = N;
-    size_t localSize = 128;  // Can be tuned
-    clEnqueueNDRangeKernel(queue, kernel, 1, NULL, &globalSize, &localSize, 0, NULL, NULL);
-    clFinish(queue);
+    // Execute kernel
+    size_t global_size = N;
+    size_t local_size = 128;  // Work-group size
+    cl_event event;
+    clEnqueueNDRangeKernel(queue, kernel, 1, NULL, &global_size, &local_size, 0, NULL, &event);
 
-    // Copy results back to host
-    clEnqueueReadBuffer(queue, d_d, CL_TRUE, 0, size_fp32, h_d, 0, NULL, NULL);
+    // Wait for kernel to finish
+    clWaitForEvents(1, &event);
+
+    // Read result from device to host
+    clEnqueueReadBuffer(queue, d_d, CL_TRUE, 0, size, h_d, 0, NULL, NULL);
 
     // Cleanup
     clReleaseMemObject(d_a);
@@ -88,12 +96,14 @@ int main() {
     clReleaseProgram(program);
     clReleaseCommandQueue(queue);
     clReleaseContext(context);
+
     free(h_a);
     free(h_b);
     free(h_c);
     free(h_d);
     free(kernel_source);
 
-    printf("OpenCL FP32 kernel execution completed.\n");
+    printf("Execution completed successfully!\n");
+
     return 0;
 }
