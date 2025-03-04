@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <CL/cl.h>
 
-#define KERNEL_FILE "06.Float32-MUL-ADD.c"
+#define KERNEL_FILE "fp32.cl"
 #define ARRAY_SIZE (5120 * 10000)  // Array size
 
 int main() {
@@ -87,6 +87,10 @@ int main() {
     // Read result from device to host
     clEnqueueReadBuffer(queue, d_d, CL_TRUE, 0, size, h_d, 0, NULL, NULL);
 
+    // Verify output by printing the first 10 elements
+    for (int i = 0; i < 10; i++) {
+    printf("h_d[%d] = %f\n", i, h_d[i]);
+    }
     // Cleanup
     clReleaseMemObject(d_a);
     clReleaseMemObject(d_b);
