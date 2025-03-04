@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <CL/cl.h>
 
-#define KERNEL_FILE "fp32.cl"
+#define KERNEL_FILE "06.Float32-MUL-ADD.c"
 #define ARRAY_SIZE (5120 * 10000)  // Array size
 
 int main() {
