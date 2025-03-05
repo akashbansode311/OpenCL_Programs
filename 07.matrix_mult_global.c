@@ -5,7 +5,7 @@
 #define MATRIX_SIZE 25000  // Define matrix size (25000x25000)
 
 // OpenCL kernel file
-#define KERNEL_FILE "04.matrix_mult_global.cl"
+#define KERNEL_FILE "07.matrix_mult_global.cl"
 
 int main() {
     int width = MATRIX_SIZE;
