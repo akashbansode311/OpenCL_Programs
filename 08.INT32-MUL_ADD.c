@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <CL/cl.h>
 
-#define KERNEL_FILE "07.INT32-MUL_ADD.cl"
+#define KERNEL_FILE "08.INT32-MUL_ADD.cl"
 #define ARRAY_SIZE (5120 * 10000)  // Array size
 
 int main() {
