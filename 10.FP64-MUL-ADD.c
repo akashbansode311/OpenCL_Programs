@@ -3,7 +3,7 @@
 #include <CL/cl.h>
 #include <time.h>
 
-#define KERNEL_FILE "08.FP64-MUL-ADD.cl"
+#define KERNEL_FILE "10.FP64-MUL-ADD.cl"
 #define ARRAY_SIZE (5120 * 10000)  // Array size
 
 int main() {
