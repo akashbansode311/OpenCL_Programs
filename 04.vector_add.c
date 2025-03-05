@@ -30,7 +30,7 @@ int main() {
     cl_command_queue queue = clCreateCommandQueueWithProperties(context, device, 0, NULL);
 
     // Read kernel source from file
-    FILE *file = fopen("03.vector_add.cl", "r");
+    FILE *file = fopen("04.vector_add.cl", "r");
     if (!file) {
         printf("Error: Unable to open kernel file\n");
         return 1;
