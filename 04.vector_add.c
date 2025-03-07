@@ -64,7 +64,7 @@ int main() {
     clSetKernelArg(kernel, 0, sizeof(cl_mem), &d_A);
     clSetKernelArg(kernel, 1, sizeof(cl_mem), &d_B);
     clSetKernelArg(kernel, 2, sizeof(cl_mem), &d_C);
-    clSetKernelArg(kernel, 3, sizeof(int), &N);  // Corrected: N is now a variable
+    clSetKernelArg(kernel, 3, sizeof(int), &N);  
 
     // Define execution configuration
     size_t globalSize = N;
